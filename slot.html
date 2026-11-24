@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>얼굴 합성 슬롯머신</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Bungee&family=Gothic+A1:wght@400;700;900&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+body { overflow-y: auto; }
+.app { height: auto; min-height: 100%; }
+.floor { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 6px; }
+.cabinet-row { display: flex; align-items: center; gap: 10px; max-width: 100%; }
+.cabinet {
+  position: relative; padding: 12px; border-radius: 22px;
+  background: linear-gradient(180deg, var(--red), color-mix(in srgb, var(--red) 55%, var(--ink)));
+  box-shadow: 0 8px 0 color-mix(in srgb, var(--red) 40%, #000), inset 0 2px 0 color-mix(in srgb, var(--paper) 40%, transparent);
+  max-width: 100%;
+}
+.marquee { display: grid; justify-items: center; gap: 6px; padding-bottom: 10px; }
+.marquee .logo { font-family: var(--arcade); font-size: clamp(1.1rem, 5vw, 1.6rem); color: var(--gold); background: var(--ink); padding: 4px 14px; border-radius: 8px; letter-spacing: 0.05em; }
+.bulbs { display: flex; gap: 8px; }
+.bulbs i { width: 10px; height: 10px; border-radius: 50%; background: var(--gold); animation: blink 0.8s steps(2) infinite; }
+.bulbs i:nth-child(even) { animation-delay: 0.4s; }
+.spinning .bulbs i { animation-duration: 0.2s; }
+@keyframes blink { 50% { background: color-mix(in srgb, var(--gold) 25%, var(--ink)); } }
+
+.window { position: relative; background: var(--ink); border-radius: 10px; overflow: hidden; border: 4px solid var(--ink); }
+.row { position: relative; overflow: hidden; }
+.row + .row { border-top: 3px solid var(--gold); }
+.track { display: flex; will-change: transform; }
+.cell { flex: none; background-color: var(--ink-2); }
+.row .lbl {
+  position: absolute; z-index: 2; left: 6px; top: 6px;
+  font-family: var(--display); font-size: 0.75rem; padding: 2px 8px; border-radius: 99px;
+  background: color-mix(in srgb, var(--ink) 75%, transparent); color: var(--gold);
+}
+.row.thunk { animation: thunk 0.22s ease-out; }
+@keyframes thunk { 30% { transform: translateY(4px); } }
+.window.jackpot { animation: jp 0.18s steps(2) 8; }
+@keyframes jp { 50% { box-shadow: 0 0 0 6px var(--gold); } }
+
+.lever { position: relative; width: 46px; height: 240px; flex: none; cursor: pointer; border: 0; background: none; padding: 0; }
+.lever .base { position: absolute; left: 8px; bottom: 30px; width: 30px; height: 70px; border-radius: 10px; background: var(--ink-3); border: 3px solid var(--ink); }
+.lever .arm {
+  position: absolute; left: 19px; bottom: 80px; width: 8px; height: 130px; border-radius: 4px;
+  background: linear-gradient(90deg, #c9c4dc, #8d87a8); transform-origin: 50% 100%;
+  transition: transform 0.25s cubic-bezier(.3,1.6,.5,1);
+}
+.lever .knob { position: absolute; left: -11px; top: -26px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffb3be, var(--red) 55%); border: 3px solid var(--ink); }
+.lever.pulled .arm { transform: scaleY(-0.55); transition-duration: 0.15s; }
+
+.result { display: grid; justify-items: center; gap: 6px; text-align: center; min-height: 92px; }
+.result .kind { font-family: var(--display); font-size: clamp(1.5rem, 6vw, 2.2rem); color: var(--gold); margin: 0; animation: slam 0.45s cubic-bezier(.2,1.6,.4,1) both; }
+.result .parts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.result .parts span { font-size: 0.85rem; padding: 4px 10px; border-radius: 99px; background: var(--ink-2); border: 1px solid var(--ink-3); }
+.result .parts b { color: var(--muted); font-weight: 700; margin-right: 4px; }
+.counter { font-family: var(--arcade); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.gallery { width: min(100%, 560px); display: grid; gap: 8px; }
+.gallery .lbl { font-family: var(--arcade); font-size: 0.75rem; letter-spacing: 0.14em; color: var(--muted); text-align: center; }
+.thumbs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.thumb { aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; display: grid; grid-template-rows: repeat(3, 1fr); background: var(--ink-2); border: 2px solid var(--ink-3); animation: slam 0.4s both; }
+.thumb.jp { border-color: var(--gold); }
+.thumb div { background-color: var(--ink-2); }
+.thumb:empty { animation: none; border-style: dashed; }
+@media (max-width: 480px) { .thumbs { grid-template-columns: repeat(3, 1fr); } .lever { height: 200px; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <a class="back" href="./">← 게임센터</a>
+    <span class="name">얼굴 합성 슬롯머신</span>
+    <span class="spacer"></span>
+    <span class="stat"><small>잭팟</small><span id="jpCount">0</span></span>
+  </div>
+  <div class="floor">
+    <div class="cabinet-row">
+      <div class="cabinet" id="cabinet">
+        <div class="marquee"><span class="logo">FACE JACKPOT</span><div class="bulbs"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="window" id="window"></div>
+      </div>
+      <button class="lever" id="lever" type="button" aria-label="레버 당기기"><span class="base"></span><span class="arm"><span class="knob"></span></span></button>
+    </div>
+    <button class="btn primary" id="spinBtn" type="button">레버 당기기</button>
+    <div class="result" id="result"><p class="kind">레버를 당겨봐</p><div class="parts"><span>세 줄이 같은 사람이면 잭팟</span></div></div>
+    <div class="actions"><button class="btn" id="copyBtn" type="button">이 합성 결과 복사</button></div>
+    <p class="toast" id="toast"></p>
+    <div class="gallery"><span class="lbl">합성 갤러리</span><div class="thumbs" id="thumbs"></div></div>
+    <span class="counter" id="counter">0회 돌림</span>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const PARTS = ["머리", "눈코", "입"];
+const CELLS = 26;
+let W = 0, H = 0, current = [PHOTOS[0], PHOTOS[0], PHOTOS[0]], spinning = false, spins = 0, jackpots = 0, lastText = "";
+const rows = [];
+
+function measure() {
+  const vw = Math.min(innerWidth - 32 - 60 - 24, 360);
+  const vh = (innerHeight - 330) * 0.75;
+  W = Math.max(180, Math.floor(Math.min(vw, vh, 360)));
+  H = Math.round(W * 4 / 3);
+}
+
+function build() {
+  measure();
+  const win = $("window"); win.replaceChildren(); rows.length = 0;
+  win.style.width = W + "px";
+  PARTS.forEach((name, r) => {
+    const row = document.createElement("div"); row.className = "row"; row.style.height = H / 3 + "px";
+    const lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = name;
+    const track = document.createElement("div"); track.className = "track";
+    row.append(track, lbl); win.append(row);
+    rows.push({ row, track });
+    fillTrack(r, [current[r]]);
+  });
+}
+
+function makeCell(p, r) {
+  const c = document.createElement("div"); c.className = "cell";
+  c.style.width = W + "px"; c.style.height = H / 3 + "px";
+  faceBg(c, p, W, H / 3, { strip: r, strips: 3, pad: 0.06 });
+  return c;
+}
+function fillTrack(r, list) {
+  const t = rows[r].track; t.style.transition = "none"; t.style.transform = "translateX(0)";
+  t.replaceChildren(...list.map((p) => makeCell(p, r)));
+}
+
+function chooseTargets() {
+  const roll = Math.random();
+  const a = pickOne(PHOTOS);
+  if (roll < 0.08) return [a, a, a];
+  if (roll < 0.3) { const b = pickOne(PHOTOS.filter((p) => p !== a)); const t = shuffle([a, a, b]); return t; }
+  return shuffle(PHOTOS).slice(0, 3);
+}
+
+async function spin() {
+  if (spinning) return; spinning = true;
+  $("lever").classList.add("pulled"); setTimeout(() => $("lever").classList.remove("pulled"), 260);
+  $("cabinet").classList.add("spinning");
+  $("window").classList.remove("jackpot");
+  $("toast").textContent = "";
+  const targets = chooseTargets();
+  const stops = rows.map((_, r) => new Promise((res) => {
+    const list = [current[r]];
+    for (let i = 1; i < CELLS - 1; i++) list.push(pickOne(PHOTOS));
+    list.push(targets[r]);
+    fillTrack(r, list);
+    const t = rows[r].track;
+    void t.offsetWidth;
+    const dur = REDUCE ? 50 : 1300 + r * 650;
+    t.style.transition = `transform ${dur}ms cubic-bezier(.12,.65,.18,1.03)`;
+    t.style.transform = `translateX(${-(CELLS - 1) * W}px)`;
+    setTimeout(() => {
+      rows[r].row.classList.remove("thunk"); void rows[r].row.offsetWidth; rows[r].row.classList.add("thunk");
+      FX.burstAt(rows[r].row, 16, ["#ffc83d", "#f6f1ff"]);
+      res();
+    }, dur);
+  }));
+  await Promise.all(stops);
+  current = targets;
+  fillTrack(0, [targets[0]]); fillTrack(1, [targets[1]]); fillTrack(2, [targets[2]]);
+  $("cabinet").classList.remove("spinning");
+  spins++; $("counter").textContent = `${spins}회 돌림`;
+  showResult(targets);
+  spinning = false;
+}
+
+function showResult([a, b, c]) {
+  const uniq = new Set([a, b, c]).size;
+  let kind;
+  if (uniq === 1) {
+    kind = "잭팟! 원본 복원 성공";
+    jackpots++; $("jpCount").textContent = jackpots;
+    $("window").classList.add("jackpot"); FX.flash(); FX.confetti(2500); FX.shake($("cabinet"));
+  } else if (uniq === 2) kind = "2/3 일치 · 거의 본인";
+  else kind = pickOne(["괴생명체 탄생", "수용소 신입 등장", "본인도 못 알아봄", "몽타주 완성", "합성 실패작 1호"]);
+  const res = $("result"); res.replaceChildren();
+  const k = document.createElement("p"); k.className = "kind"; k.textContent = kind;
+  const parts = document.createElement("div"); parts.className = "parts";
+  [a, b, c].forEach((p, i) => { const s = document.createElement("span"); s.innerHTML = `<b>${PARTS[i]}</b>`; s.append(p.t); parts.append(s); });
+  res.append(k, parts);
+  lastText = `🎰 얼굴 합성 슬롯머신: ${kind}\n머리 ${a.t} / 눈코 ${b.t} / 입 ${c.t}`;
+  addThumb([a, b, c], uniq === 1);
+}
+
+function addThumb(list, jp) {
+  const th = document.createElement("div"); th.className = "thumb" + (jp ? " jp" : "");
+  $("thumbs").prepend(th);
+  const w = th.offsetWidth, h = th.offsetHeight;
+  list.forEach((p, r) => { const d = document.createElement("div"); faceBg(d, p, w, h / 3, { strip: r, strips: 3, pad: 0.06 }); th.append(d); });
+  const all = $("thumbs").children; while (all.length > 6) all[all.length - 1].remove();
+}
+
+$("lever").addEventListener("click", spin);
+$("spinBtn").addEventListener("click", spin);
+addEventListener("keydown", (e) => { if (e.code === "Space" || e.key === "Enter") { e.preventDefault(); spin(); } });
+$("copyBtn").addEventListener("click", () => {
+  if (!lastText) { $("toast").textContent = "먼저 레버를 당겨봐"; return; }
+  copyResult(lastText + "\n" + location.href, $("toast"));
+});
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (!spinning) build(); }, 200); });
+
+current = shuffle(PHOTOS).slice(0, 3);
+build();
+loadImages();
+</script>
+</body>
+</html>

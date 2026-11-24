@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>초확대 누구게</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Bungee&family=Gothic+A1:wght@400;700;900&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+.play { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 8px; position: relative; }
+.zoomwin {
+  position: relative; overflow: hidden; border-radius: 16px;
+  width: min(100%, 46vh, 420px); aspect-ratio: 1; max-width: 100%;
+  background: var(--ink-2); border: 4px solid var(--paper);
+}
+.zoomwin img { position: absolute; left: 0; top: 0; max-width: none; will-change: transform, filter; }
+.zoomwin.right { border-color: var(--gold); }
+.zoomwin.wrong { border-color: var(--red); }
+.scope { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, transparent 60%, color-mix(in srgb, var(--ink) 55%, transparent) 100%); }
+.scope::before, .scope::after { content: ""; position: absolute; background: color-mix(in srgb, var(--paper) 35%, transparent); }
+.scope::before { left: 50%; top: 42%; bottom: 42%; width: 2px; }
+.scope::after { top: 50%; left: 42%; right: 42%; height: 2px; }
+.zoomwin.revealed .scope { opacity: 0; transition: opacity 0.3s; }
+.xlabel { position: absolute; left: 10px; top: 10px; font-family: var(--arcade); font-size: 0.8rem; padding: 3px 9px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 75%, transparent); color: var(--gold); font-variant-numeric: tabular-nums; }
+
+.meter { width: min(100%, 420px); display: flex; align-items: center; gap: 10px; }
+.meter .bar { flex: 1; height: 10px; border-radius: 99px; background: var(--ink-2); overflow: hidden; }
+.meter .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); transform-origin: left; }
+.meter .pts { font-family: var(--arcade); font-size: 1.1rem; color: var(--gold); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
+
+.choices { width: min(100%, 520px); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.choice {
+  border: 3px solid var(--ink-3); border-radius: 12px; padding: 0; overflow: hidden; background: var(--ink-2);
+  display: grid; grid-template-rows: auto auto; text-align: center;
+  transition: transform 0.15s, border-color 0.15s, opacity 0.3s;
+  animation: slam 0.35s cubic-bezier(.2,1.6,.4,1) both;
+}
+.choice:nth-child(2) { animation-delay: 0.05s; } .choice:nth-child(3) { animation-delay: 0.1s; } .choice:nth-child(4) { animation-delay: 0.15s; }
+@media (hover: hover) { .choice:hover { transform: translateY(-3px); border-color: var(--paper); } }
+.choice img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.choice span { font-size: 0.72rem; font-weight: 700; padding: 5px 4px; line-height: 1.25; min-height: 2.6em; display: grid; place-items: center; }
+.choice.right { border-color: var(--gold); transform: scale(1.06); }
+.choice.wrong { border-color: var(--red); animation: shake 0.35s both; }
+.choice.dim { opacity: 0.35; }
+@media (max-width: 480px) { .choices { grid-template-columns: repeat(2, 1fr); } .choice img { aspect-ratio: 16 / 10; } }
+
+.gain {
+  position: absolute; left: 50%; top: 30%; z-index: 6; pointer-events: none;
+  font-family: var(--arcade); font-size: clamp(2.4rem, 10vw, 4rem); color: var(--gold);
+  text-shadow: 3px 3px 0 var(--red), -3px -3px 0 var(--blue);
+  animation: gain 1s ease-out forwards;
+}
+.gain.miss { color: var(--red); text-shadow: 3px 3px 0 var(--ink); font-family: var(--display); }
+@keyframes gain { 0% { transform: translate(-50%, 0) scale(0.3); opacity: 0; } 25% { transform: translate(-50%, -10px) scale(1.2); opacity: 1; } 100% { transform: translate(-50%, -70px) scale(1); opacity: 0; } }
+
+.recap { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: min(100%, 420px); }
+.recap div { display: grid; gap: 2px; justify-items: center; font-family: var(--arcade); font-size: 0.7rem; font-variant-numeric: tabular-nums; }
+.recap img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 2px solid var(--gold); }
+.recap .x img { border-color: var(--red); filter: grayscale(1); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <a class="back" href="./">← 게임센터</a>
+    <span class="name">초확대 누구게</span>
+    <span class="spacer"></span>
+    <span class="stat"><small>문제</small><span id="qnum">1/10</span></span>
+    <span class="stat"><small>점수</small><span id="score">0</span></span>
+  </div>
+  <div class="play" id="play">
+    <div class="zoomwin" id="zoomwin"><img id="zimg" alt="확대된 사진" src="img/p01.jpg"><div class="scope"></div><span class="xlabel" id="xlabel">×9.0</span></div>
+    <div class="meter"><div class="bar"><i id="ptsbar"></i></div><span class="pts" id="pts">1000</span></div>
+    <div class="choices" id="choices"></div>
+
+    <div class="panel" id="startPanel">
+      <div class="eyebrow">EXTREME ZOOM QUIZ · 10 ROUNDS</div>
+      <h1 class="title-xl" style="font-size: clamp(3rem, 13vw, 6rem)">초확대<br>누구게</h1>
+      <p class="lead">엄청 확대된 사진이 천천히 줌아웃돼.<br><b>빨리 맞힐수록 점수가 높고</b>, 연속으로 맞히면 보너스.</p>
+      <button class="btn primary big" id="startBtn" type="button">시작</button>
+      <p class="toast" id="bestLine"></p>
+    </div>
+    <div class="panel" id="endPanel" hidden>
+      <div class="eyebrow">FINAL SCORE</div>
+      <div class="score-big" id="finalScore">0</div>
+      <p class="verdict" id="verdict"></p>
+      <div class="recap" id="recap"></div>
+      <div class="actions">
+        <button class="btn primary" id="againBtn" type="button">다시 하기</button>
+        <button class="btn" id="copyBtn" type="button">결과 복사</button>
+      </div>
+      <p class="toast" id="toast"></p>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const ROUNDS = 10, DURATION = 9000, START_SCALE = 9, BLUR = 7;
+let queue = [], qi = 0, score = 0, streak = 0, t0 = 0, raf = 0, answered = true, target = null, base = null, focus = null, history = [];
+
+function layoutImage(p) {
+  const win = $("zoomwin"), S = win.clientWidth;
+  const k = Math.min(S / p.w, S / p.h);              // 줌아웃 끝에는 사진 전체가 보이게 (contain)
+  const w = p.w * k, h = p.h * k, ox = (S - w) / 2, oy = (S - h) / 2;
+  const img = $("zimg");
+  img.src = p.src; img.style.width = w + "px"; img.style.height = h + "px";
+  img.style.left = ox + "px"; img.style.top = oy + "px";
+  // 얼굴 안쪽 아무 지점이나 확대 중심으로
+  const fx = (p.face.cx + rand(-0.18, 0.18)) * w;
+  const fy = (p.face.top + (p.face.bot - p.face.top) * rand(0.25, 0.8)) * h;
+  focus = { fx, fy, ox, oy, S };
+}
+
+function render(scale, blur) {
+  const { fx, fy, ox, oy, S } = focus;
+  // 확대 중심(fx,fy)을 창 가운데로 끌어오다가 scale=1에서 원래 위치로
+  const t = (scale - 1) / (START_SCALE - 1);
+  const cx = S / 2 - ox, cy = S / 2 - oy;
+  const tx = (cx - fx * scale) * t;
+  const ty = (cy - fy * scale) * t;
+  const img = $("zimg");
+  img.style.transformOrigin = "0 0";
+  img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  img.style.filter = blur > 0.1 ? `blur(${blur}px)` : "none";
+  $("xlabel").textContent = "×" + scale.toFixed(1);
+}
+
+function pointsAt(el) { return Math.max(100, Math.round(1000 * (1 - el / DURATION))); }
+
+function frame(now) {
+  if (answered) return;
+  const el = now - t0, k = Math.min(1, el / DURATION);
+  const ease = 1 - Math.pow(1 - k, 2.2);
+  render(START_SCALE - (START_SCALE - 1) * ease, Math.max(0, BLUR * (1 - k / 0.45)));
+  const pts = pointsAt(el);
+  $("pts").textContent = pts; $("ptsbar").style.transform = `scaleX(${pts / 1000})`;
+  raf = requestAnimationFrame(frame);
+}
+
+function nextQuestion() {
+  if (qi >= ROUNDS) return finish();
+  target = queue[qi];
+  $("qnum").textContent = `${qi + 1}/${ROUNDS}`;
+  const win = $("zoomwin"); win.className = "zoomwin";
+  layoutImage(target);
+  render(START_SCALE, BLUR);
+  const opts = shuffle([target, ...shuffle(PHOTOS.filter((p) => p !== target)).slice(0, 3)]);
+  const box = $("choices"); box.replaceChildren();
+  opts.forEach((p) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "choice";
+    b.innerHTML = `<img alt="" src="${p.src}"><span></span>`; b.querySelector("span").textContent = p.t;
+    b.addEventListener("click", () => answer(p, b));
+    box.append(b);
+  });
+  answered = false; t0 = performance.now(); raf = requestAnimationFrame(frame);
+}
+
+function gain(text, miss) {
+  const g = document.createElement("div"); g.className = "gain" + (miss ? " miss" : ""); g.textContent = text;
+  $("play").append(g); setTimeout(() => g.remove(), 1000);
+}
+
+async function answer(p, btn) {
+  if (answered) return; answered = true; cancelAnimationFrame(raf);
+  const el = performance.now() - t0;
+  const win = $("zoomwin");
+  const buttons = [...$("choices").children];
+  let got = 0;
+  if (p === target) {
+    streak++;
+    got = pointsAt(el) + (streak > 1 ? (streak - 1) * 100 : 0);
+    score += got; $("score").textContent = score;
+    btn.classList.add("right"); win.classList.add("right");
+    gain("+" + got + (streak > 1 ? ` (${streak}연속)` : ""));
+    FX.burstAt(btn, 50); FX.flash();
+  } else {
+    streak = 0;
+    btn.classList.add("wrong"); win.classList.add("wrong");
+    buttons.find((b) => b.querySelector("span").textContent === target.t)?.classList.add("right");
+    gain("땡!", true); FX.flash("red"); FX.shake(win);
+  }
+  buttons.forEach((b) => { if (!b.classList.contains("right") && b !== btn) b.classList.add("dim"); });
+  history.push({ p: target, got });
+  // 정답 공개: 전체 사진으로 빠르게 줌아웃
+  win.classList.add("revealed");
+  const from = performance.now(), cur = parseFloat($("xlabel").textContent.slice(1));
+  await new Promise((res) => {
+    const step = (now) => { const k = Math.min(1, (now - from) / 450); render(cur - (cur - 1) * (1 - Math.pow(1 - k, 3)), 0); k < 1 ? requestAnimationFrame(step) : res(); };
+    requestAnimationFrame(step);
+  });
+  await wait(1100);
+  qi++; nextQuestion();
+}
+
+function start() {
+  queue = shuffle(PHOTOS).slice(0, ROUNDS);
+  qi = 0; score = 0; streak = 0; history = [];
+  $("score").textContent = 0;
+  $("startPanel").hidden = true; $("endPanel").hidden = true;
+  nextQuestion();
+}
+
+const VERDICTS = [[0, "친구 얼굴 처음 보는 사람"], [3000, "얼굴은 아는데 콧구멍은 모름"], [5500, "친구 모공까지 외운 사람"], [8000, "수용소 CCTV 담당관"], [10500, "스토커 의심 수준"]];
+function finish() {
+  const best = Best.get("zoom"), isBest = score > best; if (isBest) Best.set("zoom", score);
+  $("finalScore").textContent = score;
+  $("verdict").textContent = (isBest && best > 0 ? "신기록! " : "") + VERDICTS.filter(([s]) => score >= s).pop()[1];
+  const rc = $("recap"); rc.replaceChildren();
+  history.forEach(({ p, got }) => {
+    const d = document.createElement("div"); if (!got) d.className = "x";
+    d.innerHTML = `<img alt="" src="${p.src}"><span>${got || "✕"}</span>`; rc.append(d);
+  });
+  $("toast").textContent = "";
+  $("endPanel").hidden = false;
+  FX.flash(); if (score >= 5500) FX.confetti(3000);
+  const right = history.filter((h) => h.got).length;
+  window._result = `🔍 초확대 누구게 ${score}점 (${right}/${ROUNDS} 정답)`;
+}
+
+$("startBtn").addEventListener("click", start);
+$("againBtn").addEventListener("click", start);
+$("copyBtn").addEventListener("click", () => copyResult(window._result + "\n" + location.href, $("toast")));
+addEventListener("resize", () => { if (!answered && target) { const el = performance.now() - t0; layoutImage(target); t0 = performance.now() - el; } });
+const best = Best.get("zoom"); if (best) $("bestLine").textContent = `내 최고 기록 ${best}점`;
+// 시작 전 배경: 아무 사진이나 확대한 상태로 깔아두기
+loadImages().then(() => { const p = pickOne(PHOTOS); layoutImage(p); render(START_SCALE, BLUR); });
+</script>
+</body>
+</html>

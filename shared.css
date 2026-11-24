@@ -1,0 +1,110 @@
+/* 수용소 게임센터 공통 스타일: 격투게임 오락실 톤. 빨강/파랑 코너, 금색은 점수와 우승에만. */
+:root {
+  --ink: #0e0c1d;
+  --ink-2: #1a1733;
+  --ink-3: #26224a;
+  --paper: #f6f1ff;
+  --muted: #a49cc4;
+  --red: #ff3d5a;
+  --blue: #2f8bff;
+  --gold: #ffc83d;
+  --display: "Black Han Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --arcade: "Bungee", "Black Han Sans", Impact, sans-serif;
+  --body: "Gothic A1", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: dark;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--body);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--red) 22%, transparent), transparent 45%),
+    radial-gradient(circle at 80% 90%, color-mix(in srgb, var(--blue) 22%, transparent), transparent 45%),
+    radial-gradient(color-mix(in srgb, var(--paper) 7%, transparent) 1px, transparent 1.5px) 0 0 / 14px 14px;
+}
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+.app {
+  position: relative; z-index: 1;
+  height: 100%;
+  display: flex; flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px 14px;
+}
+
+.topbar { display: flex; align-items: center; gap: 12px; min-height: 40px; }
+.topbar .back {
+  font-family: var(--display); font-size: 1rem; color: var(--muted); text-decoration: none;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--ink-3); background: var(--ink-2);
+}
+.topbar .back:hover { color: var(--paper); }
+.topbar .name { font-family: var(--display); font-size: 1.3rem; }
+.topbar .spacer { flex: 1; }
+.stat { font-family: var(--arcade); font-variant-numeric: tabular-nums; font-size: 1rem; display: grid; justify-items: end; line-height: 1.1; }
+.stat small { font-family: var(--body); font-size: 0.7rem; color: var(--muted); font-weight: 700; letter-spacing: 0.08em; }
+
+.eyebrow { font-family: var(--arcade); font-size: 0.8rem; letter-spacing: 0.18em; color: var(--gold); }
+.title-xl { font-family: var(--display); font-weight: 400; line-height: 0.95; margin: 0; text-wrap: balance; }
+.lead { color: var(--muted); line-height: 1.6; margin: 0; max-width: 34ch; }
+.lead b { color: var(--paper); }
+
+.btn {
+  font-family: var(--display); font-size: 1.15rem; padding: 11px 26px; border-radius: 999px;
+  border: 2px solid var(--paper); background: transparent; color: var(--paper);
+}
+.btn.primary {
+  background: var(--gold); border-color: var(--gold); color: var(--ink);
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--gold) 50%, #000);
+}
+.btn.primary:active { transform: translateY(3px); box-shadow: 0 2px 0 color-mix(in srgb, var(--gold) 50%, #000); }
+.btn.big { font-size: 1.6rem; padding: 14px 44px; animation: pulse 1.4s ease-in-out infinite; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.toast { min-height: 1.2em; margin: 0; font-size: 0.9rem; color: var(--gold); text-align: center; white-space: pre-line; }
+
+/* 시작/결과 오버레이 */
+.panel {
+  position: absolute; inset: 0; z-index: 12;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px;
+  background: color-mix(in srgb, var(--ink) 86%, transparent);
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+}
+.score-big { font-family: var(--arcade); font-size: clamp(3.5rem, 15vw, 7rem); line-height: 1; color: var(--gold); text-shadow: 4px 4px 0 var(--red), -4px -4px 0 var(--blue); font-variant-numeric: tabular-nums; }
+.verdict { font-family: var(--display); font-size: clamp(1.5rem, 5vw, 2.2rem); margin: 0; text-wrap: balance; }
+
+.flash { position: fixed; inset: 0; z-index: 20; background: var(--paper); opacity: 0; pointer-events: none; }
+.flash.go { animation: flash 0.35s ease-out; }
+.flash.red { background: var(--red); }
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 18; pointer-events: none; }
+
+@keyframes pulse { 50% { transform: scale(1.06); } }
+@keyframes slam { from { transform: scale(3) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes flash { 0% { opacity: 0.7; } 100% { opacity: 0; } }
+@keyframes shake {
+  20% { transform: translate(-8px, 4px); } 40% { transform: translate(7px, -5px); }
+  60% { transform: translate(-5px, 3px); } 80% { transform: translate(3px, -2px); }
+}
+.shake { animation: shake 0.35s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

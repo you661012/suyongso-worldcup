@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>수용소 탈옥 러너</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Bungee&family=Gothic+A1:wght@400;700;900&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+.stage { flex: 1; min-height: 0; position: relative; margin-top: 8px; border-radius: 16px; overflow: hidden; border: 3px solid var(--ink-3); touch-action: none; user-select: none; -webkit-user-select: none; }
+#game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); font-size: 0.85rem; color: var(--muted); pointer-events: none; white-space: nowrap; }
+.picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: min(100%, 440px); }
+.pick { aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--ink-3); padding: 0; background-color: var(--ink-2); transition: transform 0.15s, border-color 0.15s; animation: slam 0.35s both; }
+.pick:hover, .pick:focus-visible { transform: scale(1.1); border-color: var(--gold); }
+.caught { display: grid; justify-items: center; gap: 6px; }
+.caught .lbl { font-family: var(--arcade); font-size: 0.75rem; letter-spacing: 0.14em; color: var(--muted); }
+.caught .ph { width: 84px; height: 84px; border-radius: 50%; border: 4px solid var(--red); background-color: var(--ink-2); }
+.caught .nm { font-family: var(--display); font-size: 1.1rem; }
+.stamp-caught { font-family: var(--display); font-size: clamp(3.5rem, 16vw, 6.5rem); color: var(--red); border: 6px solid var(--red); border-radius: 14px; padding: 8px 24px; transform: rotate(-8deg); animation: slam 0.45s cubic-bezier(.2,1.6,.4,1) both; line-height: 1.1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <a class="back" href="./">← 게임센터</a>
+    <span class="name">탈옥 러너</span>
+    <span class="spacer"></span>
+    <span class="stat"><small>최고</small><span id="best">0</span></span>
+    <span class="stat"><small>거리</small><span id="score">0</span></span>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="game"></canvas>
+    <span class="hint" id="hint" hidden>탭 / 스페이스 = 점프 · 공중에서 한 번 더 = 2단 점프</span>
+
+    <div class="panel" id="startPanel">
+      <div class="eyebrow">PRISON BREAK RUNNER</div>
+      <h1 class="title-xl" style="font-size: clamp(2.6rem, 11vw, 5rem)">탈옥할 사람<br>골라</h1>
+      <div class="picker" id="picker"></div>
+      <p class="lead">굴러오는 친구는 <b>점프</b>로 피하고, 날아오는 친구는 <b>높이를 보고</b> 피해.</p>
+    </div>
+
+    <div class="panel" id="endPanel" hidden>
+      <div class="stamp-caught">검거</div>
+      <div class="score-big" id="finalScore">0</div>
+      <p class="verdict" id="verdict"></p>
+      <div class="caught"><span class="lbl">나를 잡은 사람</span><div class="ph" id="catcher"></div><span class="nm" id="catcherName"></span></div>
+      <div class="actions">
+        <button class="btn primary" id="againBtn" type="button">다시 탈옥</button>
+        <button class="btn" id="changeBtn" type="button">사람 바꾸기</button>
+        <button class="btn" id="copyBtn" type="button">결과 복사</button>
+      </div>
+      <p class="toast" id="toast"></p>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const cv = $("game"), ctx = cv.getContext("2d");
+let W = 0, H = 0, GROUND = 0, R = 30;
+function resize() {
+  const r = devicePixelRatio || 1, box = $("stage").getBoundingClientRect();
+  W = box.width; H = box.height; cv.width = W * r; cv.height = H * r; ctx.setTransform(r, 0, 0, r, 0, 0);
+  GROUND = H * 0.8; R = Math.max(20, Math.min(H * 0.075, 40));
+}
+addEventListener("resize", resize);
+
+let hero = null, state = "pick", player, obstacles, dust, speed, dist, spawnIn, tPrev, time, catcher = null, beam = 0;
+
+function reset() {
+  player = { x: W * 0.2, y: GROUND - R * 1.6, vy: 0, jumps: 0, rot: 0 };
+  obstacles = []; dust = []; speed = W * 0.55; dist = 0; spawnIn = 1.2; time = 0; catcher = null;
+}
+
+function jump() {
+  if (state !== "run") return;
+  if (player.jumps < 2) {
+    player.vy = -(player.jumps === 0 ? H * 1.55 : H * 1.3);
+    player.jumps++;
+    for (let i = 0; i < 8; i++) dust.push({ x: player.x, y: player.y + R, vx: rand(-60, 60), vy: rand(-80, -10), life: 0.4 });
+  }
+}
+
+function spawn() {
+  const level = Math.min(1, dist / 4000);
+  const others = PHOTOS.filter((p) => p !== hero);
+  const p = pickOne(others);
+  const roll = Math.random();
+  if (dist > 600 && roll < 0.22 + level * 0.15) {
+    // 날아오는 얼굴: 낮게(점프 필요) 또는 높게(점프하면 박음)
+    const high = Math.random() < 0.5;
+    const r = R * 0.8;
+    obstacles.push({ p, r, x: W + r, y: high ? GROUND - R * 3.6 : GROUND - R * 1.4, fly: true, phase: rand(0, 6) });
+  } else {
+    const r = R * rand(0.75, 1.15);
+    obstacles.push({ p, r, x: W + r, y: GROUND - r, fly: false, rot: 0 });
+    if (dist > 1500 && Math.random() < 0.25 + level * 0.2) {
+      const p2 = pickOne(others), r2 = R * 0.8;
+      obstacles.push({ p: p2, r: r2, x: W + r + r2 * 2.2, y: GROUND - r2, fly: false, rot: 0 });
+    }
+  }
+  const gap = rand(0.85, 1.5) - level * 0.35;
+  spawnIn = Math.max(0.55, gap);
+}
+
+function update(dt) {
+  time += dt; beam += dt;
+  speed = W * (0.55 + Math.min(0.75, time * 0.018));
+  dist += speed * dt / 10;
+  // player
+  player.vy += H * 4.2 * dt; player.y += player.vy * dt;
+  if (player.y >= GROUND - R * 1.6) {
+    if (player.jumps > 0) for (let i = 0; i < 10; i++) dust.push({ x: player.x + rand(-R, R), y: GROUND, vx: rand(-90, 90), vy: rand(-90, -20), life: 0.45 });
+    player.y = GROUND - R * 1.6; player.vy = 0; player.jumps = 0;
+  }
+  player.rot += dt * (player.jumps ? 8 : 0);
+  if (!player.jumps) player.rot = 0;
+  // obstacles
+  spawnIn -= dt; if (spawnIn <= 0) spawn();
+  for (const o of obstacles) {
+    o.x -= speed * dt * (o.fly ? 1.15 : 1);
+    if (!o.fly) o.rot -= (speed * dt) / o.r;
+    else { o.phase += dt * 6; }
+    const oy = o.fly ? o.y + Math.sin(o.phase) * R * 0.25 : o.y;
+    const dx = o.x - player.x, dy = oy - player.y;
+    if (Math.hypot(dx, dy) < (o.r + R) * 0.78) { catcher = o.p; return die(); }
+  }
+  obstacles = obstacles.filter((o) => o.x > -o.r * 2);
+  dust = dust.filter((d) => (d.life -= dt) > 0);
+  for (const d of dust) { d.x += (d.vx - speed * 0.3) * dt; d.y += d.vy * dt; d.vy += 300 * dt; }
+  $("score").textContent = Math.floor(dist);
+}
+
+function drawBackground() {
+  // 하늘
+  const g = ctx.createLinearGradient(0, 0, 0, GROUND);
+  g.addColorStop(0, "#0b0a18"); g.addColorStop(1, "#231d48");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // 탐조등
+  ctx.save();
+  [[W * 0.25, 0.9], [W * 0.8, -0.7]].forEach(([bx, dir], i) => {
+    const a = Math.sin(beam * 0.6 * dir + i) * 0.55 - Math.PI / 2;
+    ctx.save(); ctx.translate(bx, GROUND - H * 0.42); ctx.rotate(a);
+    const lg = ctx.createLinearGradient(0, 0, H, 0);
+    lg.addColorStop(0, "rgba(255,240,180,0.28)"); lg.addColorStop(1, "rgba(255,240,180,0)");
+    ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(H * 1.2, -H * 0.16); ctx.lineTo(H * 1.2, H * 0.16); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
+  ctx.restore();
+  // 담장 (느린 패럴랙스)
+  const wallTop = GROUND - H * 0.42, off = (dist * 10 * 0.25) % 80;
+  ctx.fillStyle = "#2a2450"; ctx.fillRect(0, wallTop, W, GROUND - wallTop);
+  ctx.strokeStyle = "#3a3366"; ctx.lineWidth = 2;
+  for (let x = -off; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x, wallTop); ctx.lineTo(x, GROUND); ctx.stroke(); }
+  for (let y = wallTop + 26; y < GROUND; y += 26) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  // 철조망
+  ctx.strokeStyle = "#8d87a8"; ctx.lineWidth = 2; ctx.beginPath();
+  const zoff = (dist * 10 * 0.25) % 24;
+  for (let x = -zoff - 24; x < W + 24; x += 12) ctx.lineTo(x, wallTop - ((x + zoff) / 12 % 2 ? 10 : 2));
+  ctx.stroke();
+  // 탑
+  [[W * 0.25], [W * 0.8]].forEach(([bx]) => {
+    ctx.fillStyle = "#1a1733"; ctx.fillRect(bx - 14, wallTop - H * 0.02, 28, H * 0.06);
+    ctx.fillStyle = "#ffc83d"; ctx.beginPath(); ctx.arc(bx, GROUND - H * 0.42, 6, 0, 7); ctx.fill();
+  });
+  // 바닥
+  ctx.fillStyle = "#16132c"; ctx.fillRect(0, GROUND, W, H - GROUND);
+  ctx.fillStyle = "#ffc83d";
+  const goff = (dist * 10) % 60;
+  for (let x = -goff; x < W; x += 60) ctx.fillRect(x, GROUND + 10, 28, 4);
+  ctx.fillStyle = "#3a3366"; ctx.fillRect(0, GROUND, W, 3);
+}
+
+function drawPlayer() {
+  const { x, y } = player, legT = time * 18;
+  // 몸 (수감복)
+  ctx.save(); ctx.translate(x, y);
+  ctx.strokeStyle = "#f6f1ff"; ctx.lineWidth = Math.max(3, R * 0.14); ctx.lineCap = "round";
+  const sw = player.jumps ? 0.6 : Math.sin(legT);
+  ctx.beginPath(); ctx.moveTo(-R * 0.2, R * 1.05); ctx.lineTo(-R * 0.2 - sw * R * 0.35, R * 1.0 + R * 0.55);
+  ctx.moveTo(R * 0.2, R * 1.05); ctx.lineTo(R * 0.2 + sw * R * 0.35, R * 1.0 + R * 0.55); ctx.stroke();
+  for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? "#0e0c1d" : "#f6f1ff"; ctx.fillRect(-R * 0.55, R * 0.55 + i * R * 0.13, R * 1.1, R * 0.13); }
+  ctx.restore();
+  ctx.save(); ctx.translate(x, y - R * 0.15); ctx.rotate(player.rot);
+  drawFace(ctx, hero.img, hero, 0, 0, R);
+  ctx.strokeStyle = "#ffc83d"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.stroke();
+  ctx.restore();
+}
+
+function drawObstacle(o) {
+  const y = o.fly ? o.y + Math.sin(o.phase) * R * 0.25 : o.y;
+  ctx.save(); ctx.translate(o.x, y);
+  if (o.fly) {
+    // 날개
+    const flap = Math.sin(o.phase * 2) * o.r * 0.5;
+    ctx.fillStyle = "#f6f1ff";
+    ctx.beginPath(); ctx.moveTo(-o.r * 0.6, 0); ctx.quadraticCurveTo(-o.r * 1.8, -o.r * 0.4 - flap, -o.r * 1.9, flap * 0.4); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(o.r * 0.6, 0); ctx.quadraticCurveTo(o.r * 1.8, -o.r * 0.4 - flap, o.r * 1.9, flap * 0.4); ctx.closePath(); ctx.fill();
+  } else ctx.rotate(o.rot);
+  drawFace(ctx, o.p.img, o.p, 0, 0, o.r);
+  ctx.strokeStyle = o.fly ? "#2f8bff" : "#ff3d5a"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, o.r, 0, 7); ctx.stroke();
+  ctx.restore();
+}
+
+function draw() {
+  drawBackground();
+  for (const d of dust) { ctx.globalAlpha = d.life / 0.45; ctx.fillStyle = "#a49cc4"; ctx.fillRect(d.x, d.y, 4, 4); }
+  ctx.globalAlpha = 1;
+  obstacles.forEach(drawObstacle);
+  if (hero) drawPlayer();
+}
+
+function loop(now) {
+  const dt = Math.min(0.033, (now - tPrev) / 1000); tPrev = now;
+  if (state === "run") update(dt);
+  else beam += dt;
+  draw();
+  requestAnimationFrame(loop);
+}
+
+const VERDICTS = [[0, "담장 앞에서 바로 검거"], [500, "운동장까지는 나감"], [1500, "담장 넘기 직전 검거"], [3000, "수용소 밖 편의점까지 도주"], [5000, "전설의 탈옥수. 현상금 걸림"]];
+function die() {
+  state = "dead";
+  FX.flash("red"); FX.shake($("stage"));
+  const score = Math.floor(dist), best = Best.get("runner"), isBest = score > best;
+  if (isBest) { Best.set("runner", score); $("best").textContent = score; }
+  $("finalScore").textContent = score + "m";
+  $("verdict").textContent = (isBest && best > 0 ? "신기록! " : "") + VERDICTS.filter(([s]) => score >= s).pop()[1];
+  faceBg($("catcher"), catcher, 84, 84, { pad: 0.05 }); $("catcherName").textContent = catcher.t;
+  $("toast").textContent = "";
+  $("hint").hidden = true;
+  setTimeout(() => { $("endPanel").hidden = false; }, 350);
+  window._result = `🏃 수용소 탈옥 러너 ${score}m (${hero.t})\n잡은 사람: ${catcher.t}`;
+}
+
+function run() {
+  reset(); state = "run";
+  $("startPanel").hidden = true; $("endPanel").hidden = true; $("hint").hidden = false;
+  setTimeout(() => ($("hint").hidden = true), 3500);
+}
+
+// 캐릭터 고르기
+PHOTOS.forEach((p, i) => {
+  const b = document.createElement("button"); b.type = "button"; b.className = "pick"; b.title = p.t; b.setAttribute("aria-label", p.t);
+  b.style.animationDelay = i * 0.03 + "s";
+  b.addEventListener("click", () => { hero = p; run(); });
+  $("picker").append(b);
+  requestAnimationFrame(() => { const s = b.offsetWidth || 64; faceBg(b, p, s, s, { pad: 0.05 }); });
+});
+
+$("stage").addEventListener("pointerdown", (e) => { if (state === "run") { e.preventDefault(); jump(); } });
+addEventListener("keydown", (e) => {
+  if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); if (state === "run") jump(); else if (state === "dead") run(); }
+});
+$("againBtn").addEventListener("click", run);
+$("changeBtn").addEventListener("click", () => { state = "pick"; $("endPanel").hidden = true; $("startPanel").hidden = false; });
+$("copyBtn").addEventListener("click", () => copyResult(window._result + "\n" + location.href, $("toast")));
+$("best").textContent = Best.get("runner");
+
+resize(); reset();
+loadImages().then(() => { tPrev = performance.now(); requestAnimationFrame(loop); });
+</script>
+</body>
+</html>
