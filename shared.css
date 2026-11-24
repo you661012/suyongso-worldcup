@@ -59,7 +59,6 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--gold); outline-
 .stat { font-family: var(--arcade); font-variant-numeric: tabular-nums; font-size: 1rem; display: grid; justify-items: end; line-height: 1.1; }
 .stat small { font-family: var(--body); font-size: 0.7rem; color: var(--muted); font-weight: 700; letter-spacing: 0.08em; }
 
-.eyebrow { font-family: var(--arcade); font-size: 0.8rem; letter-spacing: 0.18em; color: var(--gold); }
 .title-xl { font-family: var(--display); font-weight: 400; line-height: 0.95; margin: 0; text-wrap: balance; }
 .lead { color: var(--muted); line-height: 1.6; margin: 0; max-width: 34ch; }
 .lead b { color: var(--paper); }

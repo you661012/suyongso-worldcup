@@ -22,6 +22,7 @@
 #bgm.on .eq i:nth-child(2) { animation-delay: 0.15s; } #bgm.on .eq i:nth-child(3) { animation-delay: 0.3s; }
 @keyframes eq { to { height: 100%; } }
 #bgm-player { position: fixed; left: -9999px; top: 0; width: 200px; height: 113px; }
+@media (max-width: 700px) { #bgm:not(.wait) { padding: 10px; } #bgm:not(.wait) .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } }
 @media (prefers-reduced-motion: reduce) { #bgm.on .eq i { animation: none; height: 70%; } }`;
   document.head.append(css);
 

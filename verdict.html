@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>오늘의 판결</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Bungee&family=Gothic+A1:wght@400;700;900&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+.court { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
+.mug { width: min(340px, 84vw, calc((100dvh - 330px) * 1.05)); min-width: 220px; background: var(--ink-2); border: 4px solid var(--paper); border-radius: 6px; overflow: hidden; box-shadow: 0 18px 40px rgb(0 0 0 / 0.45); }
+.lineup {
+  position: relative; aspect-ratio: 1 / 0.92; background-color: #d9d4e6;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 calc(12.5% - 2px), #8b84a6 calc(12.5% - 2px) 12.5%);
+}
+.lineup .ruler { position: absolute; inset: 0; display: grid; grid-template-rows: repeat(8, 1fr); padding-left: 6px; font-family: var(--arcade); font-size: 0.7rem; color: #4b4566; text-align: left; pointer-events: none; }
+.lineup .ruler span { align-self: end; padding-bottom: 3px; }
+.lineup .ph { position: absolute; left: 16%; right: 16%; top: 10%; bottom: 0; background-color: var(--ink-3); }
+.lineup .ph.empty { display: grid; place-items: center; font-family: var(--display); font-size: 6rem; color: var(--muted); }
+.lineup .ph.spin { filter: blur(1.5px) saturate(1.4); }
+.placard { background: var(--ink); padding: 10px 14px 12px; display: grid; gap: 2px; font-family: var(--display); }
+.placard .no { font-family: var(--arcade); font-size: 0.95rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.placard .nm { font-size: 1.5rem; line-height: 1.15; min-height: 1.15em; }
+
+.charge { font-family: var(--display); font-size: clamp(1.4rem, 5.4vw, 2rem); line-height: 1.2; margin: 0; min-height: 2.4em; max-width: 18ch; text-wrap: balance; display: grid; place-items: center; }
+.sentence {
+  font-family: var(--display); font-size: clamp(1.1rem, 4.4vw, 1.5rem); color: var(--red);
+  padding: 6px 18px; border: 4px solid var(--red); border-radius: 8px; transform: rotate(-5deg);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+}
+.sentence.hit { animation: stamp 0.45s cubic-bezier(.2,1.8,.4,1) both; }
+@keyframes stamp { from { transform: rotate(-5deg) scale(3.2); opacity: 0; } }
+.court .actions { min-height: 54px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <a class="back" href="./">← 게임센터</a>
+  </div>
+  <div class="court" id="court">
+    <div class="mug" id="mug">
+      <div class="lineup">
+        <div class="ruler" aria-hidden="true"><span>190</span><span>185</span><span>180</span><span>175</span><span>170</span><span>165</span><span>160</span><span>155</span></div>
+        <div class="ph empty" id="ph">?</div>
+      </div>
+      <div class="placard"><span class="no" id="no">수용소 경찰서 · No. ----</span><span class="nm" id="nm">피고인 미정</span></div>
+    </div>
+    <p class="charge" id="charge" aria-live="polite"></p>
+    <div class="sentence" id="sentence" style="visibility: hidden">&nbsp;</div>
+    <div class="actions">
+      <button class="btn primary big" id="judgeBtn" type="button">판결 내리기</button>
+      <button class="btn" id="copyBtn" type="button" hidden>결과 복사</button>
+    </div>
+    <p class="toast" id="toast"></p>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const CRIMES = [
+  "삼겹살 마지막 한 점 무단 취식죄", "단톡방 상습 읽씹죄", "노래방 마이크 독점죄", "\"거의 다 왔어\" 위증죄",
+  "더치페이 송금 지연죄", "\"한 잔만 더\" 선동죄", "단체사진 혼자 눈 감기 상습범", "조별과제 무임승차죄",
+  "새벽 3시 라면 교사죄", "셀카 각도 사기죄", "코골이 소음 공해죄", "편의점 1+1 독식죄",
+  "게임 지고 판 엎기 미수", "안주 나오자마자 싹쓸이죄", "1교시 무단 결석 방조죄", "노래방 2차 강요죄",
+  "엽사 찍히고 표정 관리 실패죄", "\"나 오늘 안 마셔\" 허위 진술죄",
+];
+const SENTENCES = [
+  "징역 3년 · 노래방 출입 금지", "삼겹살 굽기 봉사 100시간", "다음 술자리 계산 전담", "무기징역 · 엽사 영구 박제",
+  "집행유예 2년 · 단, 엽사는 공개", "벌금 소주 3병", "셀카 금지 6개월", "모닝콜 담당 한 학기",
+  "편의점 심부름 50회", "단톡방 공지 담당 1년", "징역 5년 · 노래방 탬버린 전담", "사회봉사: 단체사진 찍사 1년",
+];
+
+let last = -1, busy = false, lastText = "";
+const ph = $("ph");
+const sizePh = (p) => faceBg(ph, p, ph.offsetWidth, ph.offsetHeight, { pad: 0.35 });
+
+async function judge() {
+  if (busy) return; busy = true;
+  $("judgeBtn").disabled = true; $("copyBtn").hidden = true; $("toast").textContent = "";
+  $("charge").textContent = ""; $("sentence").style.visibility = "hidden";
+  ph.classList.remove("empty"); ph.textContent = ""; ph.classList.add("spin");
+
+  let pick; do { pick = pickOne(PHOTOS); } while (pick.id === last);
+  last = pick.id;
+  // 얼굴 룰렛: 점점 느려지다가 멈춤
+  const order = shuffle(PHOTOS.filter((p) => p.id !== pick.id));
+  for (let i = 0, d = 50; d < 260; i++, d *= 1.13) {
+    const p = order[i % order.length]; sizePh(p); $("nm").textContent = p.t; await wait(d);
+  }
+  ph.classList.remove("spin"); sizePh(pick); $("nm").textContent = pick.t;
+  $("no").textContent = `수용소 경찰서 · No. 2026-${String((Math.random() * 9000 + 1000) | 0)}`;
+  FX.flash(); FX.shake($("mug"));
+  await wait(350);
+
+  const crime = pickOne(CRIMES), sentence = pickOne(SENTENCES);
+  for (let i = 1; i <= crime.length; i++) { $("charge").textContent = crime.slice(0, i); await wait(45); }
+  await wait(450);
+
+  const s = $("sentence"); s.textContent = sentence; s.style.visibility = "visible";
+  s.classList.remove("hit"); void s.offsetWidth; s.classList.add("hit");
+  await wait(120);
+  FX.flash("red"); FX.shake(document.querySelector(".app")); FX.burstAt(s, 50, ["#ff3d5a", "#f6f1ff"]);
+
+  lastText = `⚖️ 수용소 오늘의 판결\n피고인: ${pick.t}\n죄명: ${crime}\n선고: ${sentence}`;
+  $("judgeBtn").textContent = "다음 피고인"; $("judgeBtn").disabled = false; $("copyBtn").hidden = false;
+  busy = false;
+}
+
+$("judgeBtn").addEventListener("click", judge);
+$("copyBtn").addEventListener("click", () => copyResult(lastText + "\n" + location.href, $("toast")));
+addEventListener("resize", () => { if (last >= 0 && !busy) sizePh(PHOTOS[last]); });
+</script>
+<script src="music.js"></script>
+</body>
+</html>

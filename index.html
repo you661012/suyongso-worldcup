@@ -10,73 +10,100 @@
 <link rel="stylesheet" href="shared.css">
 <style>
 body { overflow-y: auto; }
-.app { height: auto; min-height: 100%; padding-block: 28px 40px; }
-.wrap { width: min(100%, 980px); margin: 0 auto; display: grid; gap: 28px; }
-header { display: grid; gap: 12px; justify-items: start; }
+.app { height: auto; min-height: 100%; padding-block: 28px 96px; }
+.wrap { width: min(100%, 980px); margin: 0 auto; display: grid; gap: 32px; }
+header { display: grid; gap: 18px; justify-items: start; }
 .logo { font-family: var(--display); font-weight: 400; margin: 0; line-height: 0.9; }
 .logo span { display: block; animation: slam 0.55s cubic-bezier(.2,1.6,.4,1) both; }
 .logo .a { font-size: clamp(4rem, 16vw, 9rem); text-shadow: 6px 6px 0 var(--red), -6px -6px 0 var(--blue); animation-delay: 0.05s; }
 .logo .b { font-size: clamp(2rem, 8vw, 4.4rem); color: var(--gold); letter-spacing: 0.06em; animation-delay: 0.25s; }
 
-.roster { display: grid; gap: 8px; }
-.roster .lbl { font-family: var(--arcade); font-size: 0.75rem; letter-spacing: 0.16em; color: var(--muted); }
+/* 수감자 명단: 누르면 별명이 튀어나옴 */
 .faces { display: flex; flex-wrap: wrap; gap: 8px; }
 .face {
-  width: 52px; height: 52px; border-radius: 50%; border: 3px solid var(--ink-3); background-color: var(--ink-2);
+  position: relative; width: 52px; height: 52px; padding: 0; border-radius: 50%; border: 3px solid var(--ink-3); background-color: var(--ink-2);
   animation: popin 0.4s cubic-bezier(.2,1.8,.4,1) both;
 }
 .face.hop { animation: hop 0.6s cubic-bezier(.3,1.6,.5,1); border-color: var(--gold); }
+.face.boing { animation: boing 0.5s cubic-bezier(.3,1.8,.5,1); border-color: var(--red); }
 @keyframes popin { from { transform: scale(0) rotate(-40deg); } }
 @keyframes hop { 30% { transform: translateY(-18px) rotate(-12deg) scale(1.15); } 60% { transform: translateY(0) rotate(6deg); } }
+@keyframes boing { 30% { transform: scale(1.5) rotate(10deg); } 60% { transform: scale(0.9) rotate(-6deg); } }
+.bubble {
+  position: fixed; z-index: 22; pointer-events: none; white-space: nowrap;
+  font-family: var(--display); font-size: 1.1rem; color: var(--ink); background: var(--paper);
+  padding: 6px 14px; border-radius: 12px; transform: translate(-50%, -100%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4); animation: bubble 1.4s cubic-bezier(.2,1.4,.4,1) forwards;
+}
+.bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: var(--paper); }
+@keyframes bubble { 0% { opacity: 0; translate: 0 10px; scale: 0.6; } 15% { opacity: 1; translate: 0 0; scale: 1; } 80% { opacity: 1; } 100% { opacity: 0; translate: 0 -14px; } }
 
-.games { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+/* 게임 목록: 오락실 선택 화면처럼 굵은 띠 */
+.games { display: grid; gap: 12px; }
 .game {
-  grid-column: span 2; position: relative; overflow: hidden; isolation: isolate;
-  display: grid; align-content: end; gap: 6px; min-height: 230px; padding: 18px;
-  border-radius: 18px; text-decoration: none; color: var(--paper);
+  --c: var(--gold);
+  position: relative; overflow: hidden; isolation: isolate;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+  min-height: 132px; padding: 20px 24px;
+  border-radius: 16px; text-decoration: none; color: var(--paper);
   background: var(--ink-2); border: 3px solid var(--ink-3);
-  transition: transform 0.2s cubic-bezier(.3,1.6,.5,1), border-color 0.2s;
+  transition: transform 0.25s cubic-bezier(.3,1.6,.5,1), border-color 0.2s;
   animation: rise 0.5s cubic-bezier(.2,1.3,.4,1) both;
 }
-.game:nth-child(1) { grid-column: span 6; min-height: 280px; animation-delay: 0.3s; }
-.game:nth-child(2) { grid-column: span 3; animation-delay: 0.38s; }
-.game:nth-child(3) { grid-column: span 3; animation-delay: 0.46s; }
-.game:nth-child(4) { animation-delay: 0.54s; grid-column: span 3; }
-.game:nth-child(5) { animation-delay: 0.62s; grid-column: span 3; }
-@keyframes rise { from { transform: translateY(40px); opacity: 0; } }
-@media (hover: hover) { .game:hover { transform: translateY(-4px) rotate(-0.6deg); border-color: var(--c); } }
-.game { --c: var(--gold); }
 .game.red { --c: var(--red); } .game.blue { --c: var(--blue); }
-.game .art { position: absolute; inset: 0; z-index: -1; }
-.game::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to top, var(--ink-2) 42%, color-mix(in srgb, var(--ink-2) 55%, transparent) 70%, transparent 92%); }
-.game .tag { font-family: var(--arcade); font-size: 0.7rem; letter-spacing: 0.14em; color: var(--c); }
-.game h2 { font-family: var(--display); font-weight: 400; font-size: clamp(1.8rem, 5vw, 2.6rem); margin: 0; line-height: 1; }
-.game p { margin: 0; color: color-mix(in srgb, var(--paper) 80%, transparent); font-size: 0.95rem; line-height: 1.45; max-width: 40ch; }
-.game .go { justify-self: start; margin-top: 6px; font-family: var(--display); font-size: 1rem; padding: 6px 16px; border-radius: 999px; background: var(--c); color: var(--ink); }
+.game:first-child { min-height: 250px; border-color: var(--gold); }
+.game:nth-child(1) { animation-delay: 0.3s; } .game:nth-child(2) { animation-delay: 0.36s; } .game:nth-child(3) { animation-delay: 0.42s; }
+.game:nth-child(4) { animation-delay: 0.48s; } .game:nth-child(5) { animation-delay: 0.54s; } .game:nth-child(n+6) { animation-delay: 0.6s; }
+@keyframes rise { from { transform: translateY(40px); opacity: 0; } }
+@media (hover: hover) { .game:hover { transform: translateX(8px); border-color: var(--c); } .game:hover h2 { color: var(--c); } }
+.game:active { transform: scale(0.98); }
+.game h2 {
+  font-family: var(--display); font-weight: 400; margin: 0; line-height: 1;
+  font-size: clamp(2.1rem, 7vw, 3.6rem); text-shadow: 0 2px 12px rgb(0 0 0 / 0.6); transition: color 0.2s;
+}
+.game:first-child h2 { font-size: clamp(2.8rem, 10vw, 5.2rem); }
+.game .rec { font-family: var(--arcade); font-size: 0.85rem; color: var(--c); white-space: nowrap; font-variant-numeric: tabular-nums; text-shadow: 0 1px 6px rgb(0 0 0 / 0.8); }
 
-/* 카드별 미리보기 그림 */
+/* 띠 오른쪽 그림: 왼쪽으로 갈수록 사라짐 */
+.art { position: absolute; inset: 0 0 0 38%; z-index: -1; -webkit-mask-image: linear-gradient(to right, transparent, #000 40%); mask-image: linear-gradient(to right, transparent, #000 40%); }
+.game:first-child .art { left: 0; -webkit-mask-image: linear-gradient(to top, transparent 8%, #000 60%); mask-image: linear-gradient(to top, transparent 8%, #000 60%); }
 .art.vs { display: grid; grid-template-columns: 1fr 1fr; }
 .art.vs div { background-color: var(--ink-3); }
 .art.vs div:first-child { clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); margin-right: -6%; box-shadow: inset 0 0 0 4px var(--red); }
 .art.vs div:last-child { clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%); margin-left: -6%; box-shadow: inset 0 0 0 4px var(--blue); }
-.art.vs b { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); font-family: var(--arcade); font-size: 4rem; color: var(--gold); text-shadow: 3px 3px 0 var(--red), -3px -3px 0 var(--blue); }
-.art.holes { display: grid; grid-template-columns: repeat(3, 64px); gap: 14px; justify-content: end; align-content: start; padding: 18px; }
-.art.holes div { width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--paper); background-color: var(--ink-3); animation: peek 1.6s ease-in-out infinite; }
+.art.vs b { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%) rotate(-8deg); font-family: var(--arcade); font-size: clamp(3rem, 9vw, 5rem); color: var(--gold); text-shadow: 3px 3px 0 var(--red), -3px -3px 0 var(--blue); }
+.art.holes { display: flex; gap: 14px; justify-content: flex-end; align-items: center; padding-right: 22px; }
+.art.holes div { width: 72px; height: 72px; flex: none; border-radius: 50%; border: 3px solid var(--paper); background-color: var(--ink-3); animation: peek 1.6s ease-in-out infinite; }
 .art.holes div:nth-child(2) { animation-delay: 0.5s; } .art.holes div:nth-child(3) { animation-delay: 1s; }
-@keyframes peek { 0%, 100% { transform: translateY(10px) scale(0.85); } 50% { transform: translateY(-6px) scale(1); } }
-.art.slot { display: grid; grid-template-rows: repeat(3, 1fr); width: 34%; margin: 14px 14px 0 auto; height: 44%; border: 4px solid var(--gold); border-radius: 8px; overflow: hidden; }
-.art.slot div { background-color: var(--ink-3); border-bottom: 3px solid var(--gold); }
+@keyframes peek { 0%, 100% { transform: translateY(14px) scale(0.85); } 50% { transform: translateY(-4px) scale(1); } }
+.art.slot { display: flex; justify-content: flex-end; align-items: center; padding-right: 22px; }
+.art.slot .win { display: grid; grid-template-rows: repeat(3, 1fr); width: 104px; height: 104px; border: 4px solid var(--gold); border-radius: 8px; overflow: hidden; }
+.art.slot .win div { background-color: var(--ink-3); border-bottom: 3px solid var(--gold); }
 .art.zoom div { position: absolute; inset: 0; background-color: var(--ink-3); filter: blur(2px); animation: zoomy 5s ease-in-out infinite alternate; }
 @keyframes zoomy { from { transform: scale(2.6); } to { transform: scale(1.4); filter: blur(0); } }
 .art.run { overflow: hidden; }
-.art.run div { position: absolute; top: 14%; width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--red); background-color: var(--ink-3); animation: roll 3s linear infinite; }
-.art.run div:nth-child(2) { animation-delay: 1.5s; border-color: var(--blue); top: 4%; }
+.art.run div { position: absolute; top: 18%; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--red); background-color: var(--ink-3); animation: roll 3s linear infinite; }
+.art.run div:nth-child(2) { animation-delay: 1.5s; border-color: var(--blue); top: 52%; }
 @keyframes roll { from { left: 105%; transform: rotate(0); } to { left: -20%; transform: rotate(-720deg); } }
+.art.mug { display: flex; justify-content: flex-end; align-items: stretch; padding: 14px 22px 0 0; }
+.art.mug .chart { width: 116px; background-color: #d9d4e6; background-image: repeating-linear-gradient(to bottom, transparent 0 14px, #8b84a6 14px 16px); display: flex; align-items: flex-end; justify-content: center; border-radius: 4px 4px 0 0; }
+.art.mug .chart div { width: 82px; height: 92px; background-color: var(--ink-3); }
+.art.who { display: flex; justify-content: flex-end; align-items: center; padding-right: 22px; }
+.art.who div { position: relative; width: 92px; height: 92px; border-radius: 50%; border: 4px solid var(--blue); background-color: var(--ink-3); }
+.art.who div::after { content: "?"; position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; font-family: var(--display); font-size: 3.4rem; background: color-mix(in srgb, var(--ink) 50%, transparent); text-shadow: 3px 3px 0 var(--red); }
+.art.meme { display: flex; justify-content: flex-end; align-items: center; padding-right: 22px; }
+.art.meme div { width: 150px; height: 104px; border-radius: 6px; background-color: var(--ink-3); background-size: cover; background-position: center 30%; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 6px; transform: rotate(3deg); box-shadow: 0 8px 20px rgb(0 0 0 / 0.5); }
+.art.meme b { font-family: var(--display); font-weight: 400; font-size: 0.95rem; color: #fff; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; white-space: nowrap; }
 
-footer { color: var(--muted); font-size: 0.85rem; line-height: 1.6; }
 @media (max-width: 640px) {
-  .game, .game:nth-child(n) { grid-column: span 6; min-height: 210px; }
-  .art.holes { grid-template-columns: repeat(3, 48px); } .art.holes div { width: 48px; height: 48px; }
+  .art.who div { width: 74px; height: 74px; } .art.who, .art.meme { padding-right: 14px; }
+  .art.meme div { width: 124px; height: 88px; } .art.meme b { font-size: 0.8rem; }
+  .game { min-height: 112px; padding: 16px 18px; }
+  .game:first-child { min-height: 210px; }
+  .art { left: 30%; }
+  .art.holes div { width: 54px; height: 54px; } .art.holes { gap: 8px; padding-right: 14px; }
+  .art.slot .win { width: 84px; height: 84px; } .art.slot { padding-right: 14px; }
+  .art.mug { padding-right: 14px; } .art.mug .chart { width: 92px; } .art.mug .chart div { width: 66px; height: 74px; }
 }
 </style>
 </head>
@@ -84,50 +111,44 @@ footer { color: var(--muted); font-size: 0.85rem; line-height: 1.6; }
 <div class="app">
   <div class="wrap">
     <header>
-      <div class="eyebrow">EST. 2026 · 수감자 15명</div>
       <h1 class="logo"><span class="a">수용소</span><span class="b">게임센터</span></h1>
-      <div class="roster"><span class="lbl">수감자 명단</span><div class="faces" id="faces"></div></div>
+      <div class="faces" id="faces" aria-label="수감자 명단"></div>
     </header>
 
     <nav class="games">
       <a class="game" href="worldcup.html">
-        <div class="art vs"><div id="vsA"></div><div id="vsB"></div><b>VS</b></div>
-        <span class="tag">TOURNAMENT · 15명</span>
+        <div class="art vs" aria-hidden="true"><div id="vsA"></div><div id="vsB"></div><b>VS</b></div>
         <h2>수용소 월드컵</h2>
-        <p>엽사 15장이 1:1로 붙어서 한 장만 살아남아. 우승자는 수용소장.</p>
-        <span class="go">입장</span>
+      </a>
+      <a class="game red" href="verdict.html">
+        <div class="art mug" aria-hidden="true"><div class="chart"><div id="artMug"></div></div></div>
+        <h2>오늘의 판결</h2>
+      </a>
+      <a class="game blue" href="test.html">
+        <div class="art who" aria-hidden="true"><div id="artWho"></div></div>
+        <h2>나랑 닮은 수감자</h2>
+      </a>
+      <a class="game" href="meme.html">
+        <div class="art meme" aria-hidden="true"><div id="artMeme"><b>한 잔만 할게</b><b>3시간 후</b></div></div>
+        <h2>짤 공장</h2>
       </a>
       <a class="game red" href="mole.html">
-        <div class="art holes" id="artMole"><div></div><div></div><div></div></div>
-        <span class="tag">ARCADE · 30초</span>
-        <h2>두더지잡기</h2>
-        <p>튀어나오는 친구 얼굴을 망치로. 황금 얼굴 +5, 간수 -3.</p>
-        <span class="go">입장</span>
+        <div class="art holes" id="artMole" aria-hidden="true"><div></div><div></div><div></div></div>
+        <h2>두더지잡기</h2><span class="rec" data-best="mole" data-unit="점"></span>
       </a>
       <a class="game blue" href="slot.html">
-        <div class="art slot" id="artSlot"><div></div><div></div><div></div></div>
-        <span class="tag">GACHA · 무한</span>
+        <div class="art slot" aria-hidden="true"><div class="win" id="artSlot"><div></div><div></div><div></div></div></div>
         <h2>얼굴 합성 슬롯</h2>
-        <p>머리, 눈코, 입이 따로 돌아가. 세 줄이 같은 사람이면 잭팟.</p>
-        <span class="go">입장</span>
       </a>
       <a class="game blue" href="zoom.html">
-        <div class="art zoom"><div id="artZoom"></div></div>
-        <span class="tag">QUIZ · 10문제</span>
-        <h2>초확대 누구게</h2>
-        <p>콧구멍만 보고 누군지 맞혀. 빨리 맞힐수록 점수가 높아.</p>
-        <span class="go">입장</span>
+        <div class="art zoom" aria-hidden="true"><div id="artZoom"></div></div>
+        <h2>초확대 누구게</h2><span class="rec" data-best="zoom" data-unit="점"></span>
       </a>
       <a class="game red" href="runner.html">
-        <div class="art run" id="artRun"><div></div><div></div></div>
-        <span class="tag">RUNNER · 최고기록</span>
-        <h2>탈옥 러너</h2>
-        <p>굴러오고 날아오는 친구들을 피해 수용소 밖으로.</p>
-        <span class="go">입장</span>
+        <div class="art run" id="artRun" aria-hidden="true"><div></div><div></div></div>
+        <h2>탈옥 러너</h2><span class="rec" data-best="runner" data-unit="m"></span>
       </a>
     </nav>
-
-    <footer>점수와 최고 기록은 각자 폰에만 저장돼. 결과 복사 버튼으로 단톡방에 자랑하기.</footer>
   </div>
 </div>
 
@@ -135,26 +156,55 @@ footer { color: var(--muted); font-size: 0.85rem; line-height: 1.6; }
 <script>
 const faces = [];
 PHOTOS.forEach((p, i) => {
-  const d = document.createElement("div"); d.className = "face"; d.title = p.t; d.style.animationDelay = 0.4 + i * 0.05 + "s";
+  const d = document.createElement("button"); d.type = "button"; d.className = "face"; d.setAttribute("aria-label", p.t);
+  d.style.animationDelay = 0.4 + i * 0.05 + "s";
+  d.addEventListener("click", () => poke(d, p));
   $("faces").append(d); faces.push(d);
-  faceBg(d, p, 52, 52, { pad: 0.05 });
+  faceBg(d, p, 46, 46, { pad: 0.05 });
 });
 setInterval(() => {
-  const f = pickOne(faces); f.classList.remove("hop"); void f.offsetWidth; f.style.animationDelay = "0s"; f.classList.add("hop");
+  const f = pickOne(faces); if (f.classList.contains("boing")) return;
+  f.classList.remove("hop"); void f.offsetWidth; f.style.animationDelay = "0s"; f.classList.add("hop");
 }, 900);
 
+// 얼굴을 누르면 별명 말풍선
+function poke(el, p) {
+  el.classList.remove("hop", "boing"); void el.offsetWidth; el.style.animationDelay = "0s"; el.classList.add("boing");
+  setTimeout(() => el.classList.remove("boing"), 500);
+  document.querySelectorAll(".bubble").forEach((b) => b.remove());
+  const r = el.getBoundingClientRect(), b = document.createElement("div");
+  b.className = "bubble"; b.textContent = p.t;
+  b.style.left = Math.min(innerWidth - 90, Math.max(90, r.left + r.width / 2)) + "px"; b.style.top = r.top - 10 + "px";
+  document.body.append(b); setTimeout(() => b.remove(), 1400);
+  FX.burst(r.left + r.width / 2, r.top + r.height / 2, 18);
+}
+addEventListener("scroll", () => document.querySelectorAll(".bubble").forEach((b) => b.remove()), { passive: true });
+
+document.querySelectorAll(".rec").forEach((el) => {
+  const v = Best.get(el.dataset.best); if (v) el.textContent = `최고 ${v}${el.dataset.unit}`;
+});
+
+const sh = shuffle(PHOTOS);
 function paintArt() {
-  const sh = shuffle(PHOTOS);
   const a = $("vsA"), b = $("vsB");
   a.style.backgroundImage = `url("${sh[0].src}")`; a.style.backgroundSize = "cover"; a.style.backgroundPosition = "center";
   b.style.backgroundImage = `url("${sh[1].src}")`; b.style.backgroundSize = "cover"; b.style.backgroundPosition = "center";
   [...$("artMole").children].forEach((d, i) => faceBg(d, sh[2 + i], d.offsetWidth, d.offsetWidth, { pad: 0.05 }));
-  const slot = $("artSlot"), rows = [...slot.children], w = slot.offsetWidth, h = slot.offsetHeight;
-  rows.forEach((d, i) => faceBg(d, sh[5 + i], w, h / 3, { strip: i, strips: 3, pad: 0.06 }));
   const z = $("artZoom"); z.style.backgroundImage = `url("${sh[8].src}")`; z.style.backgroundSize = "cover"; z.style.backgroundPosition = "center 35%";
-  [...$("artRun").children].forEach((d, i) => faceBg(d, sh[9 + i], 60, 60, { pad: 0.05 }));
+  [...$("artRun").children].forEach((d, i) => faceBg(d, sh[9 + i], 48, 48, { pad: 0.05 }));
+  const m = $("artMug"); faceBg(m, sh[11], m.offsetWidth, m.offsetHeight, { pad: 0.35 });
+  const me = $("artMeme"); me.style.backgroundImage = `url("${sh[12].src}")`;
+  paintSlot();
 }
-paintArt();
+// 슬롯 그림은 계속 돌아감
+function paintSlot() {
+  const slot = $("artSlot"), w = slot.clientWidth, h = slot.clientHeight;
+  [...slot.children].forEach((d, i) => faceBg(d, pickOne(PHOTOS), w, h / 3, { strip: i, strips: 3, pad: 0.06 }));
+}
+// 닮은 수감자 그림은 물음표 뒤에서 얼굴이 바뀜
+function paintWho() { const w = $("artWho"); faceBg(w, pickOne(PHOTOS), w.clientWidth, w.clientHeight, { pad: 0.05 }); }
+paintArt(); paintWho();
+if (!REDUCE) { setInterval(paintSlot, 900); setInterval(paintWho, 400); }
 addEventListener("resize", paintArt);
 </script>
 <script src="music.js"></script>

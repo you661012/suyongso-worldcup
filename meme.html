@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>수용소 짤 공장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Bungee&family=Gothic+A1:wght@400;700;900&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+body { overflow-y: auto; }
+.app { height: auto; min-height: 100%; }
+.factory { width: min(100%, 560px); margin: 0 auto; display: grid; gap: 14px; padding-block: 10px 90px; }
+canvas#meme { display: block; width: auto; max-width: 100%; max-height: 46dvh; margin: 0 auto; border-radius: 10px; box-shadow: 0 14px 40px rgb(0 0 0 / 0.5); background: var(--ink-2); }
+canvas#meme.pop { animation: pop 0.35s cubic-bezier(.2,1.6,.4,1); }
+@keyframes pop { 40% { transform: scale(0.96) rotate(-1deg); } }
+.fields { display: grid; gap: 8px; }
+.fields input {
+  width: 100%; font: 400 1.15rem var(--display); color: var(--paper); background: var(--ink-2);
+  border: 3px solid var(--ink-3); border-radius: 12px; padding: 12px 14px;
+}
+.fields input::placeholder { color: var(--muted); }
+.fields input:focus { outline: none; border-color: var(--gold); }
+.strip { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: var(--ink-3) transparent; }
+.strip button { flex: none; width: 56px; height: 56px; padding: 0; border-radius: 50%; border: 3px solid var(--ink-3); background-color: var(--ink-2); scroll-snap-align: start; transition: transform 0.15s; }
+.strip button[aria-pressed="true"] { border-color: var(--gold); transform: scale(1.08); }
+.tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tools .btn { width: 100%; padding-inline: 10px; }
+.tools .dice { grid-column: 1 / -1; }
+::selection { background: var(--gold); color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"><a class="back" href="./">← 게임센터</a></div>
+  <div class="factory">
+    <canvas id="meme" width="1080" height="1080" aria-label="만든 짤 미리보기"></canvas>
+    <div class="fields">
+      <input id="top" maxlength="40" placeholder="위에 들어갈 말" aria-label="위 글씨" autocomplete="off">
+      <input id="bot" maxlength="40" placeholder="아래에 들어갈 말" aria-label="아래 글씨" autocomplete="off">
+    </div>
+    <div class="strip" id="strip" aria-label="사진 고르기"></div>
+    <div class="tools">
+      <button class="btn dice" id="diceBtn" type="button">아무 말이나 넣기</button>
+      <button class="btn primary" id="saveBtn" type="button">이미지 저장</button>
+      <button class="btn" id="shareBtn" type="button">카톡으로 공유</button>
+    </div>
+    <p class="toast" id="toast"></p>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const LINES = [
+  ["교수님이 출석 부를 때", "나 (방금 일어남)"],
+  ["\"한 잔만 마시고 갈게\"", "3시간 후"],
+  ["조별과제 발표 5분 전", "자료 아직 안 옴"],
+  ["더치페이 하자고 했을 때", "송금 안 한 사람"],
+  ["노래방 마지막 곡이랬는데", "예약 10곡 남음"],
+  ["시험 끝나고", "성적 나오기 전까지만 행복"],
+  ["삼겹살 마지막 한 점", "눈치 싸움 시작"],
+  ["단톡방 공지 올라옴", "읽음 1 안 사라짐"],
+  ["\"나 오늘 일찍 잘 거야\"", "새벽 4시"],
+  ["사진 찍자!", "본인만 준비 안 됨"],
+  ["월요일 1교시", "그 자체"],
+  ["엄마 전화 왔을 때", "목소리 정상인 척"],
+  ["치킨 시킬까?", "이미 결제함"],
+  ["과제 마감 1시간 전", "이제 시작함"],
+];
+
+const cv = $("meme"), cx = cv.getContext("2d");
+let photo = pickOne(PHOTOS);
+const strip = $("strip"), thumbs = [];
+PHOTOS.forEach((p) => {
+  const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-label", p.t);
+  faceBg(b, p, 50, 50, { pad: 0.05 });
+  b.addEventListener("click", () => { photo = p; mark(); draw(true); });
+  strip.append(b); thumbs.push(b);
+});
+const mark = () => thumbs.forEach((b, i) => b.setAttribute("aria-pressed", String(PHOTOS[i] === photo)));
+
+// 글씨가 넓으면 줄바꿈하고, 그래도 길면 글씨 크기를 줄인다
+function layout(text, W, size) {
+  cx.font = `${size}px "Black Han Sans"`;
+  const words = text.split(" "), lines = [];
+  let line = "";
+  for (const w of words) {
+    const t = line ? line + " " + w : w;
+    if (cx.measureText(t).width > W && line) { lines.push(line); line = w; } else line = t;
+  }
+  if (line) lines.push(line);
+  if (size > 40 && (lines.length > 2 || lines.some((l) => cx.measureText(l).width > W))) return layout(text, W, size * 0.88);
+  return { lines, size };
+}
+function caption(text, fromBottom) {
+  if (!text.trim()) return;
+  const W = cv.width, H = cv.height;
+  const { lines, size } = layout(text.trim(), W * 0.92, Math.round(Math.min(W, H) * 0.12));
+  cx.font = `${size}px "Black Han Sans"`; cx.textAlign = "center"; cx.textBaseline = "top";
+  cx.lineJoin = "round"; cx.lineWidth = size * 0.18; cx.strokeStyle = "#0e0c1d"; cx.fillStyle = "#ffffff";
+  const lh = size * 1.12, total = lh * lines.length, pad = Math.min(W, H) * 0.04;
+  let y = fromBottom ? H - pad - total : pad;
+  for (const l of lines) { cx.strokeText(l, W / 2, y); cx.fillText(l, W / 2, y); y += lh; }
+}
+function draw(pop) {
+  const im = photo.img;
+  if (!im || !im.complete || !im.naturalWidth) return;
+  const W = 1080, H = Math.round((W * photo.h) / photo.w);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  cx.drawImage(im, 0, 0, W, H);
+  caption($("top").value, false); caption($("bot").value, true);
+  if (pop) { cv.classList.remove("pop"); void cv.offsetWidth; cv.classList.add("pop"); }
+}
+
+function dice() {
+  const [a, b] = pickOne(LINES); $("top").value = a; $("bot").value = b;
+  photo = pickOne(PHOTOS); mark(); draw(true);
+  thumbs[photo.id].scrollIntoView({ block: "nearest", inline: "center", behavior: REDUCE ? "auto" : "smooth" });
+}
+
+const toBlob = () => new Promise((r) => cv.toBlob(r, "image/jpeg", 0.92));
+async function save() {
+  const url = URL.createObjectURL(await toBlob()), a = document.createElement("a");
+  a.href = url; a.download = `수용소짤-${Date.now()}.jpg`; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  $("toast").textContent = "저장했어. 사진첩이나 다운로드 폴더를 봐.";
+  FX.burstAt($("saveBtn"), 30);
+}
+async function share() {
+  const file = new File([await toBlob()], "수용소짤.jpg", { type: "image/jpeg" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); } catch {}
+  } else { $("toast").textContent = "이 브라우저는 바로 공유가 안 돼서 저장할게."; save(); }
+}
+
+$("top").addEventListener("input", () => draw());
+$("bot").addEventListener("input", () => draw());
+$("diceBtn").addEventListener("click", dice);
+$("saveBtn").addEventListener("click", save);
+$("shareBtn").addEventListener("click", share);
+
+const [a, b] = pickOne(LINES); $("top").value = a; $("bot").value = b; mark();
+Promise.all([loadImages(), document.fonts.load('80px "Black Han Sans"').catch(() => {})]).then(() => draw());
+</script>
+<script src="music.js"></script>
+</body>
+</html>

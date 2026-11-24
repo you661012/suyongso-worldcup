@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>나랑 닮은 수감자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Bungee&family=Gothic+A1:wght@400;700;900&display=swap">
+<link rel="stylesheet" href="shared.css">
+<style>
+body { overflow-y: auto; }
+.app { height: auto; min-height: 100%; }
+.screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; padding-block: 16px 80px; width: min(100%, 520px); margin: 0 auto; }
+
+/* 시작: 15명 얼굴이 물음표 뒤에서 섞임 */
+.mystery { position: relative; width: 168px; height: 168px; border-radius: 50%; border: 5px solid var(--gold); background-color: var(--ink-3); overflow: hidden; }
+.mystery::after { content: "?"; position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--display); font-size: 6rem; color: var(--paper); background: color-mix(in srgb, var(--ink) 55%, transparent); text-shadow: 4px 4px 0 var(--red); }
+
+.qhead { width: 100%; display: grid; gap: 10px; }
+.qnum { font-family: var(--arcade); font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.prog { height: 8px; border-radius: 99px; background: var(--ink-2); overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--gold); transition: width 0.4s cubic-bezier(.2,.9,.3,1); }
+.q { font-family: var(--display); font-weight: 400; font-size: clamp(1.8rem, 7vw, 2.6rem); line-height: 1.15; margin: 0; text-wrap: balance; animation: slam 0.4s cubic-bezier(.2,1.6,.4,1) both; }
+.answers { width: 100%; display: grid; gap: 10px; }
+.answers button {
+  font-family: var(--display); font-size: 1.2rem; text-align: left; padding: 16px 20px; border-radius: 14px;
+  background: var(--ink-2); border: 3px solid var(--ink-3); color: var(--paper);
+  animation: rise 0.35s cubic-bezier(.2,1.2,.4,1) both; transition: border-color 0.15s, transform 0.15s;
+}
+.answers button:nth-child(2) { animation-delay: 0.05s; } .answers button:nth-child(3) { animation-delay: 0.1s; } .answers button:nth-child(4) { animation-delay: 0.15s; }
+@media (hover: hover) { .answers button:hover { border-color: var(--gold); transform: translateX(4px); } }
+.answers button.picked { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 22%, var(--ink-2)); }
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } }
+
+/* 결과 */
+.reveal { position: relative; width: min(260px, 66vw); aspect-ratio: 1; border-radius: 50%; border: 6px solid var(--gold); background-color: var(--ink-3); box-shadow: 0 0 0 4px var(--ink), 0 16px 50px rgb(0 0 0 / 0.5); animation: rise 0.7s cubic-bezier(.2,1.4,.4,1) both; }
+.res-name { font-family: var(--display); font-weight: 400; font-size: clamp(2.2rem, 9vw, 3.4rem); line-height: 1.05; margin: 0; color: var(--gold); text-wrap: balance; }
+.res-desc { margin: 0; font-size: 1.08rem; line-height: 1.6; max-width: 30ch; text-wrap: pretty; }
+.pals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.pal { display: grid; justify-items: center; gap: 6px; padding: 14px 10px; border-radius: 14px; background: var(--ink-2); }
+.pal b { font-family: var(--display); font-weight: 400; font-size: 1rem; }
+.pal.good b { color: var(--blue); } .pal.bad b { color: var(--red); }
+.pal .ph { width: 64px; height: 64px; border-radius: 50%; border: 3px solid currentColor; background-color: var(--ink-3); }
+.pal.good .ph { color: var(--blue); } .pal.bad .ph { color: var(--red); }
+.pal span { font-size: 0.9rem; color: color-mix(in srgb, var(--paper) 85%, transparent); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"><a class="back" href="./">← 게임센터</a></div>
+
+  <section class="screen" id="intro">
+    <div class="mystery" id="mystery"></div>
+    <h1 class="title-xl" style="font-size: clamp(2.6rem, 11vw, 4.6rem)">나랑 닮은<br>수감자는?</h1>
+    <button class="btn primary big" id="startBtn" type="button">테스트 시작</button>
+  </section>
+
+  <section class="screen" id="quiz" hidden>
+    <div class="qhead"><span class="qnum" id="qnum">1 / 7</span><div class="prog"><i id="prog"></i></div></div>
+    <h2 class="q" id="q"></h2>
+    <div class="answers" id="answers"></div>
+  </section>
+
+  <section class="screen" id="result" hidden>
+    <div class="reveal" id="resFace"></div>
+    <h2 class="res-name" id="resName"></h2>
+    <p class="res-desc" id="resDesc"></p>
+    <div class="pals">
+      <div class="pal good"><b>찰떡 궁합</b><div class="ph" id="goodFace"></div><span id="goodName"></span></div>
+      <div class="pal bad"><b>천적</b><div class="ph" id="badFace"></div><span id="badName"></span></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="againBtn" type="button">다시 하기</button>
+      <button class="btn" id="copyBtn" type="button">결과 복사</button>
+    </div>
+    <p class="toast" id="toast"></p>
+  </section>
+</div>
+
+<script src="shared.js"></script>
+<script>
+// 사진 번호(0~14)별 해설. 순서는 shared.js의 PHOTOS와 같음
+const DESC = [
+  "집게를 잡는 순간 눈빛이 바뀌는 타입. 고기 굽기와 분위기 장악 담당.",
+  "1차에서 끝내자는 말을 믿어본 적 없음. 마이크 잡으면 시간 개념이 사라짐.",
+  "남의 농담에 본인이 제일 크게 웃음. 리액션 하나로 분위기를 살림.",
+  "어디서든 묘하게 배경이랑 어울림. 조용한데 존재감은 큼.",
+  "'한 잔만'이 세 병이 되는 사람. 건배사는 잘하는데 그다음은 기억이 안 남.",
+  "셀카 거리 조절 실패 전문. 카메라랑 친해도 너무 친함.",
+  "몸은 여기 있는데 정신은 이미 다음 장소. 사진이 늘 흔들려 나옴.",
+  "신비주의 컨셉. 연락은 잘 안 되는데 나타나면 다 해결함.",
+  "알람 다섯 개 맞추고 다섯 개 다 끔. 아침엔 말 걸지 말 것.",
+  "편의점 신상은 이 사람한테 물어보면 됨. 야식 담당 보급관.",
+  "텐션 조절 버튼이 없음. 이 사람 있으면 조용한 술자리는 불가능.",
+  "메뉴판을 제일 오래 보는 사람. 음식 나오면 대화 중단.",
+  "일단 잡고 보는 행동파. 계획은 없지만 추진력은 최고.",
+  "웃으면 눈이 없어지는 순한 맛. 모두가 편하게 생각하는 사람.",
+  "어디서든 5분 안에 잠듦. 술자리 끝까지 남는 건 몸뿐.",
+];
+// 답마다 점수를 받는 사진 번호
+const QUESTIONS = [
+  ["술자리에서 나는?", [["고기 굽는 집게 담당", [0, 12]], ["건배사 담당", [4, 10]], ["안주부터 시키는 사람", [11, 9]], ["어느새 자고 있음", [14, 8]]]],
+  ["노래방에 가면?", [["마이크 안 놓음", [1, 10]], ["탬버린 + 리액션", [2, 13]], ["노래 고르다 끝남", [3, 7]], ["소파에서 잠", [14, 6]]]],
+  ["약속 10분 전 나는?", [["이미 도착함", [12, 3]], ["\"거의 다 왔어\" (집)", [8, 6]], ["오는 길에 편의점", [9, 11]], ["연락 두절", [7, 14]]]],
+  ["단체사진 찍을 때?", [["카메라에 너무 가까움", [5, 0]], ["혼자 흔들림", [6, 1]], ["눈 감김", [13, 2]], ["뒤에서 이상한 포즈", [10, 4]]]],
+  ["단톡방에서 나는?", [["읽씹 장인", [7, 3]], ["ㅋㅋㅋ만 100개", [2, 13]], ["맛집 링크 공유", [11, 9]], ["새벽 3시에 등장", [8, 6]]]],
+  ["시험 전날 밤?", [["밤샘", [8, 12]], ["일찍 자고 포기", [14, 7]], ["야식부터", [9, 11]], ["친구 불러서 놀기", [4, 1]]]],
+  ["나를 동물로 치면?", [["사자", [0, 10]], ["강아지", [13, 2]], ["나무늘보", [14, 6]], ["고양이", [3, 5]]]],
+];
+
+let qi = 0, score = [], lastText = "", locked = false;
+const show = (id) => ["intro", "quiz", "result"].forEach((s) => ($(s).hidden = s !== id));
+
+// 시작 화면: 물음표 뒤에서 얼굴이 계속 바뀜
+const mys = $("mystery");
+let mysTimer = setInterval(() => faceBg(mys, pickOne(PHOTOS), 158, 158, { pad: 0.05 }), REDUCE ? 2000 : 180);
+
+function start() {
+  qi = 0; score = PHOTOS.map(() => rand(0, 0.5)); // 동점일 때 랜덤하게 갈리도록 작은 값
+  show("quiz"); ask();
+}
+
+function ask() {
+  const [q, ans] = QUESTIONS[qi];
+  $("qnum").textContent = `${qi + 1} / ${QUESTIONS.length}`;
+  $("prog").style.width = (qi / QUESTIONS.length) * 100 + "%";
+  const h = $("q"); h.textContent = q; h.style.animation = "none"; void h.offsetWidth; h.style.animation = "";
+  const box = $("answers"); box.replaceChildren();
+  ans.forEach(([label, ids]) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = label;
+    b.addEventListener("click", () => pick(b, ids));
+    box.append(b);
+  });
+  locked = false;
+}
+
+async function pick(btn, ids) {
+  if (locked) return; locked = true;
+  btn.classList.add("picked"); FX.burstAt(btn, 16, ["#ffc83d", "#f6f1ff"]);
+  ids.forEach((id, i) => (score[id] += i === 0 ? 2 : 1));
+  await wait(280);
+  qi++;
+  if (qi < QUESTIONS.length) ask(); else finish();
+}
+
+async function finish() {
+  $("prog").style.width = "100%";
+  const order = PHOTOS.map((p) => p.id).sort((a, b) => score[b] - score[a]);
+  const me = PHOTOS[order[0]], good = PHOTOS[order[1]], bad = PHOTOS[order[order.length - 1]];
+  show("result");
+  const face = $("resFace"), size = face.clientWidth;
+  // 결과 발표 전 얼굴 룰렛
+  $("resName").textContent = "두구두구…"; $("resDesc").textContent = "";
+  for (let d = 60; d < 240; d *= 1.15) { faceBg(face, pickOne(PHOTOS), size, size, { pad: 0.05 }); await wait(d); }
+  faceBg(face, me, size, size, { pad: 0.05 });
+  $("resName").textContent = me.t; $("resDesc").textContent = DESC[me.id];
+  faceBg($("goodFace"), good, 58, 58, { pad: 0.05 }); $("goodName").textContent = good.t;
+  faceBg($("badFace"), bad, 58, 58, { pad: 0.05 }); $("badName").textContent = bad.t;
+  FX.flash(); FX.burstAt(face, 80); FX.confetti(1500);
+  lastText = `🔎 나랑 닮은 수감자: ${me.t}\n"${DESC[me.id]}"\n찰떡 궁합 ${good.t} · 천적 ${bad.t}`;
+}
+
+$("startBtn").addEventListener("click", () => { clearInterval(mysTimer); start(); });
+$("againBtn").addEventListener("click", start);
+$("copyBtn").addEventListener("click", () => copyResult(lastText + "\n" + location.href, $("toast")));
+addEventListener("keydown", (e) => {
+  if ($("quiz").hidden) return;
+  const n = Number(e.key); if (n >= 1 && n <= 4) $("answers").children[n - 1]?.click();
+});
+</script>
+<script src="music.js"></script>
+</body>
+</html>

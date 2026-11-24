@@ -26,20 +26,17 @@
 <div class="app">
   <div class="topbar">
     <a class="back" href="./">← 게임센터</a>
-    <span class="name">탈옥 러너</span>
     <span class="spacer"></span>
     <span class="stat"><small>최고</small><span id="best">0</span></span>
     <span class="stat"><small>거리</small><span id="score">0</span></span>
   </div>
   <div class="stage" id="stage">
     <canvas id="game"></canvas>
-    <span class="hint" id="hint" hidden>탭 / 스페이스 = 점프 · 공중에서 한 번 더 = 2단 점프</span>
+    <span class="hint" id="hint" hidden>탭하면 점프 · 공중에서 한 번 더</span>
 
     <div class="panel" id="startPanel">
-      <div class="eyebrow">PRISON BREAK RUNNER</div>
       <h1 class="title-xl" style="font-size: clamp(2.6rem, 11vw, 5rem)">탈옥할 사람<br>골라</h1>
       <div class="picker" id="picker"></div>
-      <p class="lead">굴러오는 친구는 <b>점프</b>로 피하고, 날아오는 친구는 <b>높이를 보고</b> 피해.</p>
     </div>
 
     <div class="panel" id="endPanel" hidden>

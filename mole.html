@@ -95,7 +95,6 @@
 <div class="app">
   <div class="topbar">
     <a class="back" href="./">← 게임센터</a>
-    <span class="name">두더지잡기</span>
     <span class="spacer"></span>
     <span class="stat"><small>점수</small><span id="score">0</span></span>
     <span class="stat"><small>남은 시간</small><span id="time">30.0</span></span>
@@ -105,15 +104,13 @@
     <div class="board" id="board"></div>
 
     <div class="panel" id="startPanel">
-      <div class="eyebrow">WHACK-A-FRIEND · 30 SEC</div>
       <h1 class="title-xl" style="font-size: clamp(3rem, 13vw, 6rem)">두더지<br>잡기</h1>
-      <p class="lead">튀어나오는 친구 얼굴을 30초 동안 최대한 많이 때려.<br><b>황금 얼굴 +5</b> · <b style="color: var(--red)">간수 -3</b></p>
+      <p class="lead"><b style="color: var(--gold)">황금 얼굴 +5</b> · <b style="color: var(--red)">간수 −3</b></p>
       <button class="btn primary big" id="startBtn" type="button">시작</button>
       <p class="toast" id="bestLine"></p>
     </div>
 
     <div class="panel" id="endPanel" hidden>
-      <div class="eyebrow">TIME UP</div>
       <div class="score-big" id="finalScore">0</div>
       <p class="verdict" id="verdict"></p>
       <div class="mvp"><span class="lbl">가장 많이 맞은 사람</span><div class="ph" id="mvpFace"></div><span class="nm" id="mvpName"></span></div>
